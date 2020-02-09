@@ -1,5 +1,5 @@
 import Foundation
-
+@_implementationOnly import CPenguinParallel
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 import Darwin
@@ -90,7 +90,7 @@ final public class NaiveThreadPool: ThreadPool {
                 item.execute()
             }
             // In case it was stolen by a background thread, steal other work.
-            while !item.isFinished {
+            while !item.isFinished() {
                 // Prefer local work over remote work.
                 if let work = contexts.lookForWorkLocal() {
                     work.pointee.execute()
@@ -277,24 +277,18 @@ final public class NaiveThreadPool: ThreadPool {
 }
 
 private struct WorkItem {
-    enum State {
-        case pre
-        case ongoing
-        case finished
-    }
     var op: () -> Void // guarded by lock.
-    var state: State = .pre
-    let lock = NSLock()  // TODO: use atomic operations on State. (No need for a lock.)
+    var state: CWorkItem
+
+    init(op: @escaping () -> Void) {
+        self.op = op
+        self.state = CWorkItem()
+        initializeItem(&state)
+    }
 
     /// Returns true if this thread should execute op, false otherwise.
     mutating func tryTake() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if state == .pre {
-            state = .ongoing
-            return true
-        }
-        return false
+        tryTakeItem(&state)
     }
 
     mutating func execute() {
@@ -303,15 +297,10 @@ private struct WorkItem {
     }
 
     mutating func markFinished() {
-        lock.lock()
-        defer { lock.unlock() }
-        assert(state == .ongoing)
-        state = .finished
+        markItemFinished(&state)
     }
 
-    var isFinished: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return state == .finished
+    mutating func isFinished() -> Bool {
+        return tryConsumeItem(&state)
     }
 }
