@@ -17,25 +17,29 @@ import XCTest
 import PenguinStructures
 
 final class NominalElementDictionaryTests: XCTestCase {
+  private let uniqueUnlabeledTuples = (0..<9).map { ($0, String($0)) }
+  private let uniqueLabeledTuples
+    = (0..<9).map { (key: $0, value: String($0)) }
+  private let uniqueKeyValues = (0..<9).map {
+    KeyValuePair(key: $0, value: String($0))
+  }
+  
   func test_interopFunctions() {
-    let s0 = (0..<9).lazy.map { ($0, String($0)) }
     var d = NominalElementDictionary<Int, String>()
-    d.merge(s0.keyValuePairs()) { _,_ in fatalError() }
-    XCTAssert(s0.allSatisfy { d[$0.0] == $0.1 })
+    d.merge(uniqueUnlabeledTuples.keyValuePairs()) { _,_ in fatalError() }
+    XCTAssert(uniqueUnlabeledTuples.allSatisfy { d[$0.0] == $0.1 })
 
     d.removeAll()
-    let s1 = (0..<9).lazy.map { (key: $0, value: String($0)) }
-    d.merge(s1.keyValuePairs()) { _,_ in fatalError() }
-    XCTAssert(s1.allSatisfy { d[$0.key] == $0.value })
+    d.merge(uniqueLabeledTuples.keyValuePairs()) { _,_ in fatalError() }
+    XCTAssert(uniqueLabeledTuples.allSatisfy { d[$0.key] == $0.value })
 
     XCTAssert(d.keyValueTuples().count == d.count)
     XCTAssert(d.keyValueTuples().allSatisfy { d[$0.0] == $0.1 } )
   }
 
   func test_collectionSemantics() {
-    let contents = (0..<9).map { KeyValuePair(key: $0, value: String($0)) }
-    let d = NominalElementDictionary(uniqueKeysWithValues: contents)
-    let expectedValues = contents.sorted {
+    let d = NominalElementDictionary(uniqueKeysWithValues: uniqueKeyValues)
+    let expectedValues = uniqueKeyValues.sorted {
       d.index(forKey: $0.key) ?? d.endIndex
         < d.index(forKey: $1.key) ?? d.endIndex
     }
@@ -43,8 +47,7 @@ final class NominalElementDictionaryTests: XCTestCase {
   }
 
   func test_initFromDictionary() {
-    let d0: [Int: String] = .init(
-      uniqueKeysWithValues: (0..<9).map { (key: $0, value: String($0)) })
+    let d0: [Int: String] = .init(uniqueKeysWithValues: uniqueLabeledTuples)
     let d1 = NominalElementDictionary(d0)
     XCTAssertEqual(Array(d0.keyValuePairs()), Array(d1))
   }
@@ -58,13 +61,21 @@ final class NominalElementDictionaryTests: XCTestCase {
     let d = NominalElementDictionary<Int, String>(minimumCapacity: 100)
     XCTAssert(d.capacity >= 100)
   }
-  
+
+  func test_initUniqueKeysWithValues() {
+    let d = NominalElementDictionary(uniqueKeysWithValues: uniqueKeyValues)
+    XCTAssertEqual(d.count, uniqueKeyValues.count)
+    XCTAssert(uniqueKeyValues.allSatisfy { d[$0.key] == $0.value })
+    // TODO: test for traps when keys are not unique.
+  }
+
   static var allTests = [
     ("test_interopFunctions", test_interopFunctions),
     ("test_collectionSemantics", test_collectionSemantics),
     ("test_initFromDictionary", test_initFromDictionary),
     ("test_defaultInit", test_defaultInit),
     ("test_initMinimumCapacity", test_initMinimumCapacity),
+    ("test_initUniqueKeysWithValues", test_initUniqueKeysWithValues),
   ]
 }
 
