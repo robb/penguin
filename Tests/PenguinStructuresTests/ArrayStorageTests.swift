@@ -129,6 +129,29 @@ extension ArrayStorageImplementation where Element: Equatable {
       }
     }
   }
+
+  static func test_replacementStorage<Source: Collection>(source: Source)
+    where Source.Element == Element
+  {
+    let s = Self.create(minimumCapacity: 0)
+    let oldBaseAddress = s.withUnsafeMutableBufferPointer { $0.baseAddress! }
+    for m in 0..<source.count {
+      var newBaseAddress: UnsafeMutablePointer<Element>?
+
+      let r = s.replacementStorage(count: m, minimumCapacity: m) {
+        oldBase, newBase in
+        XCTAssertEqual(oldBase, oldBaseAddress)
+        newBaseAddress = newBase
+        for (i, x) in source.prefix(m).enumerated() {
+          (newBase + i).initialize(to: x)
+        }
+      }
+      XCTAssertEqual(
+        newBaseAddress, r.withUnsafeMutableBufferPointer { $0.baseAddress! })
+      XCTAssertEqual(r.count, m)
+      XCTAssertGreaterThanOrEqual(r.capacity, m)
+    }
+  }
 }
 
 extension ArrayStorageImplementation where Element: Comparable {
@@ -194,6 +217,10 @@ class ArrayStorageTests: XCTestCase {
       sortedSource: 99..<199, raw: true)
   }
   
+  func test_replacementStorage() {
+    ArrayStorage<Int>.test_replacementStorage(source: 0..<10)
+  }
+  
   func test_deinit() {
     ArrayStorage<Tracked<()>>.test_deinit { Tracked((), track: $0) }
   }
@@ -202,6 +229,9 @@ class ArrayStorageTests: XCTestCase {
     ("test_create", test_create),
     ("test_append", test_append),
     ("test_typeErasedAppend", test_typeErasedAppend),
+    ("test_appending", test_appending),
+    ("test_typeErasedAppending", test_typeErasedAppending),
+    ("test_replacementStorage", test_replacementStorage),
     ("test_withUnsafeMutableBufferPointer", test_withUnsafeMutableBufferPointer),
     (
       "test_withUnsafeMutableRawBufferPointer",
