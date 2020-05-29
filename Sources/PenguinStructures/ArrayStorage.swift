@@ -55,7 +55,9 @@ open class AnyArrayStorage {
   /// - Postcondition: if `moveElements` is `true`, `self.count == 0`
   ///
   /// - Complexity: O(N).
-  func appendingValue(at p: UnsafeRawPointer, moveElements: Bool) -> Self {
+  public final func appendingValue(
+    at p: UnsafeRawPointer, moveElements: Bool
+  ) -> Self {
     unsafeDowncast(
       implementation.appendingValue_(at: p, moveElements: moveElements),
       to: Self.self)
