@@ -164,7 +164,8 @@ extension ArrayStorageImplementation {
     count newCount: Int,
     minimumCapacity: Int,
     initialize: (
-      UnsafeMutablePointer<Element>, UnsafeMutablePointer<Element>) -> Void
+      _ selfBase: UnsafeMutablePointer<Element>,
+      _ replacementBase: UnsafeMutablePointer<Element>) -> Void
   ) -> Self {
     assert(minimumCapacity >= newCount)
     let r = Self.create(minimumCapacity: minimumCapacity)
